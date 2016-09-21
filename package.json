@@ -1,0 +1,12 @@
+{
+  "name": "cf-registrator",
+  "version": "1.0.0",
+  "description": "module for registration Codefresh services with Service Discovery (consul)",
+  "main": "index.js",
+  "author": "Codefresh",
+  "license": "ISC",
+  "dependencies": {
+    "consul": "^0.25.0",
+    "q": "^1.4.1"
+  }
+}
