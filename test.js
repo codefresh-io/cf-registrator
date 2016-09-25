@@ -17,7 +17,7 @@ var check1 = {
     ID: "checkTestService1-1",
     Name: "testService1",
     TTL: "10s",
-    checkPromise: checkPromise
+   // checkPromise: checkPromise
 };
 
 var service2 = {
@@ -25,11 +25,11 @@ var service2 = {
     Name: "testService1"
 };
 
-var registrator1 = new Registrator();
-var registrator2 = new Registrator();
+var registrator1 = Registrator;
+// var registrator2 = new Registrator();
 
 Q.all([registrator1.register(service1, check1),
-    registrator2.register(service2),
+  //  registrator2.register(service2),
 ])
 //Q.all([
 //    registrator1.deRegister(service1.ID),
