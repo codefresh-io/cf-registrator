@@ -74,7 +74,7 @@ class Registrator{
                 self.serviceDef.Name = 'Unnamed';
             }
             if (! self.serviceDef.Address) {
-                self.serviceDef.Address = self.agent.Config.AdvertiseAddr || ip.address();
+                self.serviceDef.Address = ip.address() || self.agent.Config.AdvertiseAddr;
             }
 
             if (! self.serviceDef.ID ){
@@ -115,7 +115,7 @@ class Registrator{
         self.checkDef = {
             ID: heathCheck.ID || ("check_" + self.serviceDef.ID),
             ServiceID: self.serviceDef.ID,
-            Name: heathCheck.Name,
+            Name: heathCheck.Name || ("check_" + self.serviceDef.Name) ,
             Notes: heathCheck.Notes || ("Health check for service " + self.serviceDef.Name),
             TTL: heathCheck.TTL || process.env.SERVICE_CHECK_TTL || "15s"
         };
