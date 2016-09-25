@@ -4,6 +4,11 @@ var os = require('os');
 var ip = require('ip');
 var http = require('http');
 var _ = require('lodash');
+var CFError      = require('cf-errors');
+
+var logger = function(message){
+    console.log(message);
+}
 
 var util    = require('util');
 var fromCallback = function (fn) {
@@ -21,15 +26,18 @@ var fromCallback = function (fn) {
 
 class Registrator{
 
-    constructor(consulAddr, consulPort) {
-
-        this.consulAddr = consulAddr || 'consul';
-        this.consulPort = consulPort || 8500;
+    constructor(opts) {
+        opts = opts || {};
+        this.consulAddr = opts.consulAddr || 'consul';
+        this.consulPort = opts.consulPort || 8500;
         this.consul = require('consul')({ host: this.consulAddr,
             port: this.consulPort,
             promisify: fromCallback });
 
         this.healthStatus = "passing";
+
+        this.maxTries = opts.maxTries || 100;
+        this.tryDelay = opts.tryDelay || 10000;
     }
 
     /**
@@ -50,12 +58,12 @@ class Registrator{
     }
 
     /**
-     *
+     * Registers service with consul. Retries if failed
      * @param service
      * @param heathCheck
      * @returns {*}
      */
-    register(service, heathCheck){
+    register(service, heathCheck, tryNum){
 
         var self = this;
         return self.consul.agent.self()
@@ -74,39 +82,53 @@ class Registrator{
                 self.serviceDef.ID = `${os.hostname()}:${self.serviceDef.Name}:${self.serviceDef.Port}`
             }
 
-
             return self.consul.agent.service.register(self.serviceDef)
             .then(function(registerResult){
-                var checkDef;
                 if (heathCheck) {
-                    self.checkDef = {
-                        ID: heathCheck.ID || ("check_" + self.serviceDef.ID),
-                        ServiceID: self.serviceDef.ID,
-                        Name: heathCheck.Name,
-                        Notes: heathCheck.Notes || ("Health check for service " + self.serviceDef.Name),
-                        TTL: heathCheck.TTL || process.env.SERVICE_CHECK_TTL || "15s"
-                        //"Script": "/usr/local/bin/check_mem.py",
-                        //"DockerContainerID": "f972c95ebf0e",
-                        //"Shell": "/bin/bash",
-                        //"HTTP": "http://example.com",
-                        //"TCP": "example.com:22",
-                        // Interval: "10s",
-                    }
-                    self.checkPromise = heathCheck.checkPromise || (() => Q({status: "passing"}));
-                    return self.consul.agent.check.register(self.checkDef)
-                    .then((checkRegisterResult) => {
-                        if (self.checkDef.TTL) {
-                            self.startHeartBeat();
-                        }
-                        return Q.resolve(self.getRegistration());
-                    });
+                    return self.registerCheck(heathCheck)
+                        .then((checkRegisterResult) => {
+                            if (self.checkDef.TTL) {
+                                self.startHeartBeat();
+                            }
+                            return Q.resolve(self.getRegistration());
+                        });
                 }
                 else {
                     return Q.resolve(self.getRegistration());
                 }
             })
+        })
+        .catch(function(error) {
+            if (! tryNum) tryNum = 0;
+            let errorMsg = `ERROR: Service Register Failed ${self.serviceDef || service} \ntryNum = ${tryNum}\n${error.toString()} `
+            logger(`${errorMsg} \n Retry after 2s ...`);
+            if (tryNum < self.maxTries)
+                return Q.delay(self.tryDelay).then(function() {
+                    return self.register(service, heathCheck, tryNum + 1)
+                });
+            else
+                return Q.reject(new CFError(`${errorMsg} \n max retries reached`));
         });
     }
+
+    registerCheck(heathCheck, tryNum){
+        var self = this;
+        self.checkDef = {
+            ID: heathCheck.ID || ("check_" + self.serviceDef.ID),
+            ServiceID: self.serviceDef.ID,
+            Name: heathCheck.Name,
+            Notes: heathCheck.Notes || ("Health check for service " + self.serviceDef.Name),
+            TTL: heathCheck.TTL || process.env.SERVICE_CHECK_TTL || "15s"
+        }
+        self.checkPromise = heathCheck.checkPromise || (() => Q({status: "passing"}));
+
+        return self.consul.agent.check.register(self.checkDef)
+            .then((checkRegisterResult) => {
+                return Q.resolve(self.checkDef);
+            });
+
+    }
+
 
     getRegistration(){
         var registration = {
@@ -158,11 +180,11 @@ class Registrator{
             };
 
             var hearBitReq = http.request(reqOptions, function (res) {
-               // console.log(`HeartBit ${self.checkDef.ID} STATUS: ${res.statusCode}`);
-               // console.log(`HeartBit ${self.checkDef.ID} HEADERS: ${JSON.stringify(res.headers)}`);
+               // logger(`HeartBit ${self.checkDef.ID} STATUS: ${res.statusCode}`);
+               // logger(`HeartBit ${self.checkDef.ID} HEADERS: ${JSON.stringify(res.headers)}`);
             });
             hearBitReq.on('error', (e) => {
-                console.log(`HeartBit ${self.checkDef.ID} error : ${e.message}`);
+                logger(`HeartBit ${self.checkDef.ID} error : ${e.message}`);
             });
             hearBitReq.write(JSON.stringify(reqBody));
             hearBitReq.end();
@@ -179,7 +201,6 @@ class Registrator{
 
         }, self.checkDef.TTL.replace(/\D/,"") / 2 * 1000 );
     }
-
 }
 
 module.exports = new Registrator();
