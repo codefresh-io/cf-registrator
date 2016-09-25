@@ -9,9 +9,9 @@ var service1 = {
     Name: "testService1"
 };
 
-var checkPromise = function(){
+var checkPromise = function(){ // jshint ignore:line
     return Q.resolve({status: "passing", message: "WARNING TEST"});
-}
+};
 
 var check1 = {
     ID: "checkTestService1-1",
@@ -20,7 +20,7 @@ var check1 = {
    // checkPromise: checkPromise
 };
 
-var service2 = {
+var service2 = { // jshint ignore:line
     ID: "testService1-2",
     Name: "testService1"
 };

@@ -8,9 +8,8 @@ var CFError      = require('cf-errors');
 
 var logger = function(message){
     console.log(message);
-}
+};
 
-var util    = require('util');
 var fromCallback = function (fn) {
     var deferred = Q.defer();
     fn(function (err, data) {
@@ -79,14 +78,14 @@ class Registrator{
             }
 
             if (! self.serviceDef.ID ){
-                self.serviceDef.ID = `${os.hostname()}:${self.serviceDef.Name}:${self.serviceDef.Port}`
+                self.serviceDef.ID = `${os.hostname()}:${self.serviceDef.Name}:${self.serviceDef.Port}`;
             }
 
             return self.consul.agent.service.register(self.serviceDef)
-            .then(function(registerResult){
+            .then(function(registerResult){ // jshint ignore:line
                 if (heathCheck) {
                     return self.registerCheck(heathCheck)
-                        .then((checkRegisterResult) => {
+                        .then((checkRegisterResult) => { // jshint ignore:line
                             if (self.checkDef.TTL) {
                                 self.startHeartBeat();
                             }
@@ -96,22 +95,22 @@ class Registrator{
                 else {
                     return Q.resolve(self.getRegistration());
                 }
-            })
+            });
         })
         .catch(function(error) {
             if (! tryNum) tryNum = 0;
-            let errorMsg = `ERROR: Service Register Failed ${self.serviceDef || service} \ntryNum = ${tryNum}\n${error.toString()} `
-            logger(`${errorMsg} \n Retry after 2s ...`);
+            let errorMsg = `ERROR: Service Register Failed ${self.serviceDef || service} \ntryNum = ${tryNum}\n${error.toString()} `;
+            logger(`${errorMsg} \n Retry after ${self.maxTries} ...`);
             if (tryNum < self.maxTries)
                 return Q.delay(self.tryDelay).then(function() {
-                    return self.register(service, heathCheck, tryNum + 1)
+                    return self.register(service, heathCheck, tryNum + 1);
                 });
             else
                 return Q.reject(new CFError(`${errorMsg} \n max retries reached`));
         });
     }
 
-    registerCheck(heathCheck, tryNum){
+    registerCheck(heathCheck){
         var self = this;
         self.checkDef = {
             ID: heathCheck.ID || ("check_" + self.serviceDef.ID),
@@ -119,11 +118,11 @@ class Registrator{
             Name: heathCheck.Name,
             Notes: heathCheck.Notes || ("Health check for service " + self.serviceDef.Name),
             TTL: heathCheck.TTL || process.env.SERVICE_CHECK_TTL || "15s"
-        }
+        };
         self.checkPromise = heathCheck.checkPromise || (() => Q({status: "passing"}));
 
         return self.consul.agent.check.register(self.checkDef)
-            .then((checkRegisterResult) => {
+            .then((checkRegisterResult) => { // jshint ignore:line
                 return Q.resolve(self.checkDef);
             });
 
@@ -136,7 +135,7 @@ class Registrator{
             consulPort: this.consulPort,
             serviceDef: this.serviceDef,
             checkDef: this.checkDef
-        }
+        };
         return registration;
     }
 
@@ -179,7 +178,7 @@ class Registrator{
                 Output: message || self.healthOutput
             };
 
-            var hearBitReq = http.request(reqOptions, function (res) {
+            var hearBitReq = http.request(reqOptions, function (res) { // jshint ignore:line
                // logger(`HeartBit ${self.checkDef.ID} STATUS: ${res.statusCode}`);
                // logger(`HeartBit ${self.checkDef.ID} HEADERS: ${JSON.stringify(res.headers)}`);
             });
@@ -188,7 +187,7 @@ class Registrator{
             });
             hearBitReq.write(JSON.stringify(reqBody));
             hearBitReq.end();
-        }
+        };
 
         setInterval(function() {
             self.checkPromise()
