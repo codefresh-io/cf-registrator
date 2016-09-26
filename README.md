@@ -2,6 +2,13 @@
 
 ### module for registration Codefresh services with Service Discovery (consul)
 
+** Features
+- Registers services to consul agent/service/register endpoint - https://www.consul.io/docs/agent/http/agent.html#agent_check_register
+
+- Deregisters service on SIGTERM
+
+- Optionally registers healthcheck and starts status heartbit to consul TTL endpoint - https://www.consul.io/docs/agent/http/agent.html#agent_check_pass
+
 
 
 #### Example
