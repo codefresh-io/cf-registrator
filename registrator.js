@@ -99,8 +99,8 @@ class Registrator{
         })
         .catch(function(error) {
             if (! tryNum) tryNum = 0;
-            let errorMsg = `ERROR: Service Register Failed ${self.serviceDef || service} \ntryNum = ${tryNum}\n${error.toString()} `;
-            logger(`${errorMsg} \n Retry after ${self.maxTries} ...`);
+            let errorMsg = `ERROR: Service Register Failed ${JSON.stringify(self.serviceDef || service)} \ntryNum = ${tryNum}\n${error.toString()} `;
+            logger(`${errorMsg} \n Retry after ${self.tryDelay} ms ...`);
             if (tryNum < self.maxTries)
                 return Q.delay(self.tryDelay).then(function() {
                     return self.register(service, heathCheck, tryNum + 1);
