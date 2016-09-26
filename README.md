@@ -2,7 +2,7 @@
 
 ### module for registration Codefresh services with Service Discovery (consul)
 
-** Features
+** Features **
 - Registers services to consul agent/service/register endpoint - https://www.consul.io/docs/agent/http/agent.html#agent_check_register
 
 - Deregisters service on SIGTERM
@@ -30,7 +30,8 @@ var checkDef = {
     checkPromise: function(){
         let status = "passing";
         let message = "cf-api works normally";
-        return Q.resolve({status: status, message: message});
+        return Q.resolve({status: status,
+                          message: message});
     }
 };
 
@@ -41,4 +42,14 @@ registrator.register(serviceDef, checkDef);
 ##### index.js
 ```js
 require('./registrator');
+```
+
+##### sigterm.js
+```js
+process.on('SIGTERM', function () {
+    // Graceful stop code
+    console.log("Deregister service");
+    registrator.deRegister();
+});
+
 ```

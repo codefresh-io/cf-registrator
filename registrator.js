@@ -6,9 +6,7 @@ var http = require('http');
 var _ = require('lodash');
 var CFError      = require('cf-errors');
 
-var logger = function(message){
-    console.log(message);
-};
+var logger       = require('cf-logs').Logger("codefresh:cf-registrator");
 
 var fromCallback = function (fn) {
     var deferred = Q.defer();
@@ -89,10 +87,12 @@ class Registrator{
                             if (self.checkDef.TTL) {
                                 self.startHeartBeat();
                             }
+                            logger.info(`Service #{self.serviceDef.Name} #{self.serviceDef.Address}:#{self.serviceDef.Port} has been registered + health check`);
                             return Q.resolve(self.getRegistration());
                         });
                 }
                 else {
+                    logger.info(`Service #{self.serviceDef.Name} #{self.serviceDef.Address}:#{self.serviceDef.Port} has been registered without health check`);
                     return Q.resolve(self.getRegistration());
                 }
             });
@@ -100,7 +100,7 @@ class Registrator{
         .catch(function(error) {
             if (! tryNum) tryNum = 0;
             let errorMsg = `ERROR: Service Register Failed ${JSON.stringify(self.serviceDef || service)} \ntryNum = ${tryNum}\n${error.toString()} `;
-            logger(`${errorMsg} \n Retry after ${self.tryDelay} ms ...`);
+            logger.error(`${errorMsg} \n Retry after ${self.tryDelay} ms ...`);
             if (tryNum < self.maxTries)
                 return Q.delay(self.tryDelay).then(function() {
                     return self.register(service, heathCheck, tryNum + 1);
@@ -179,11 +179,11 @@ class Registrator{
             };
 
             var hearBitReq = http.request(reqOptions, function (res) { // jshint ignore:line
-               // logger(`HeartBit ${self.checkDef.ID} STATUS: ${res.statusCode}`);
-               // logger(`HeartBit ${self.checkDef.ID} HEADERS: ${JSON.stringify(res.headers)}`);
+               // logger.info(`HeartBit ${self.checkDef.ID} STATUS: ${res.statusCode}`);
+               // logger.info(`HeartBit ${self.checkDef.ID} HEADERS: ${JSON.stringify(res.headers)}`);
             });
             hearBitReq.on('error', (e) => {
-                logger(`HeartBit ${self.checkDef.ID} error : ${e.message}`);
+                logger.error(`HeartBit ${self.checkDef.ID} error : ${e.message}`);
             });
             hearBitReq.write(JSON.stringify(reqBody));
             hearBitReq.end();
