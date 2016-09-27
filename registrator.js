@@ -72,7 +72,7 @@ class Registrator{
                 self.serviceDef.Name = 'Unnamed';
             }
             if (! self.serviceDef.Address) {
-                self.serviceDef.Address = ip.address() || self.agent.Config.AdvertiseAddr;
+                self.serviceDef.Address = ip.address() || selfAgent.Config.AdvertiseAddr;
             }
 
             if (! self.serviceDef.ID ){
@@ -87,12 +87,12 @@ class Registrator{
                             if (self.checkDef.TTL) {
                                 self.startHeartBeat();
                             }
-                            logger.info(`Service #{self.serviceDef.Name} #{self.serviceDef.Address}:#{self.serviceDef.Port} has been registered + health check`);
+                            logger.info(`Service ${self.serviceDef.Name} ${self.serviceDef.Address}:${self.serviceDef.Port} has been registered + health check`);
                             return Q.resolve(self.getRegistration());
                         });
                 }
                 else {
-                    logger.info(`Service #{self.serviceDef.Name} #{self.serviceDef.Address}:#{self.serviceDef.Port} has been registered without health check`);
+                    logger.info(`Service ${self.serviceDef.Name} ${self.serviceDef.Address}:${self.serviceDef.Port} has been registered without health check`);
                     return Q.resolve(self.getRegistration());
                 }
             });
@@ -102,9 +102,13 @@ class Registrator{
             let errorMsg = `ERROR: Service Register Failed ${JSON.stringify(self.serviceDef || service)} \ntryNum = ${tryNum}\n${error.toString()} `;
             logger.error(`${errorMsg} \n Retry after ${self.tryDelay} ms ...`);
             if (tryNum < self.maxTries)
-                return Q.delay(self.tryDelay).then(function() {
+                return Q.delay(self.tryDelay)
+                .then(function() {
                     return self.register(service, heathCheck, tryNum + 1);
-                });
+                })
+                .catch((error) => {
+                        let a = 1;
+                    });
             else
                 return Q.reject(new CFError(`${errorMsg} \n max retries reached`));
         });
@@ -140,7 +144,10 @@ class Registrator{
     }
 
     deRegister(){
-        return this.consul.agent.service.deregister(this.serviceDef.ID);
+        return Q().then(() => this.consul.agent.service.deregister(this.serviceDef.ID))
+            .then(() => {
+                return Q(this.stopHeartBeat());
+            });
     }
 
     setHealthStatus(status, message){
@@ -189,7 +196,7 @@ class Registrator{
             hearBitReq.end();
         };
 
-        setInterval(function() {
+        this.heartBitIntervalId = setInterval(function() {
             self.checkPromise()
             .then(checkResult => {
                 putHeartBitStatus(checkResult.status, checkResult.message);
@@ -199,6 +206,13 @@ class Registrator{
             });
 
         }, self.checkDef.TTL.replace(/\D/,"") / 2 * 1000 );
+    }
+
+    stopHeartBeat(){
+        if (this.heartBitIntervalId) {
+            clearInterval(this.heartBitIntervalId);
+        }
+        return true;
     }
 }
 
