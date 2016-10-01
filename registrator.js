@@ -32,6 +32,7 @@ class Registrator{
             promisify: fromCallback });
 
         this.healthStatus = "passing";
+        this.healthOutput = "";
 
         this.maxTries = opts.maxTries || 100;
         this.tryDelay = opts.tryDelay || 10000;
@@ -87,11 +88,13 @@ class Registrator{
                             if (self.checkDef.TTL) {
                                 self.startHeartBeat();
                             }
+                            self.registered = true;
                             logger.info(`Service ${self.serviceDef.Name} ${self.serviceDef.Address}:${self.serviceDef.Port} has been registered + health check`);
                             return Q.resolve(self.getRegistration());
                         });
                 }
                 else {
+                    self.registered = true;
                     logger.info(`Service ${self.serviceDef.Name} ${self.serviceDef.Address}:${self.serviceDef.Port} has been registered without health check`);
                     return Q.resolve(self.getRegistration());
                 }
@@ -105,10 +108,7 @@ class Registrator{
                 return Q.delay(self.tryDelay)
                 .then(function() {
                     return self.register(service, heathCheck, tryNum + 1);
-                })
-                .catch((error) => {
-                        let a = 1;
-                    });
+                });
             else
                 return Q.reject(new CFError(`${errorMsg} \n max retries reached`));
         });
@@ -144,25 +144,12 @@ class Registrator{
     }
 
     deRegister(){
+        var self = this;
         return Q().then(() => this.consul.agent.service.deregister(this.serviceDef.ID))
             .then(() => {
+                self.registered = false;
                 return Q(this.stopHeartBeat());
             });
-    }
-
-    setHealthStatus(status, message){
-        this.healthStatus = status;
-        this.healthOutput = message;
-    }
-
-    setHealthPassing(message){
-        this.setHealthStatus("passing", message);
-    }
-    setHealthWarning(message){
-        this.setHealthStatus("warning", message);
-    }
-    setHealthCritical(message){
-        this.setHealthStatus("critical", message);
     }
 
     startHeartBeat(){
@@ -177,7 +164,6 @@ class Registrator{
             }
         };
 
-
         var putHeartBitStatus = function(status, message){
 
             var reqBody = {
@@ -185,15 +171,15 @@ class Registrator{
                 Output: message || self.healthOutput
             };
 
-            var hearBitReq = http.request(reqOptions, function (res) { // jshint ignore:line
+            var heartBitReq = http.request(reqOptions, function (res) { // jshint ignore:line
                // logger.info(`HeartBit ${self.checkDef.ID} STATUS: ${res.statusCode}`);
                // logger.info(`HeartBit ${self.checkDef.ID} HEADERS: ${JSON.stringify(res.headers)}`);
             });
-            hearBitReq.on('error', (e) => {
+            heartBitReq.on('error', (e) => {
                 logger.error(`HeartBit ${self.checkDef.ID} error : ${e.message}`);
             });
-            hearBitReq.write(JSON.stringify(reqBody));
-            hearBitReq.end();
+            heartBitReq.write(JSON.stringify(reqBody));
+            heartBitReq.end();
         };
 
         this.heartBitIntervalId = setInterval(function() {
@@ -206,6 +192,7 @@ class Registrator{
             });
 
         }, self.checkDef.TTL.replace(/\D/,"") / 2 * 1000 );
+        // return Q.resolve(this.heartBitIntervalId);
     }
 
     stopHeartBeat(){
