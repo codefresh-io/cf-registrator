@@ -42,7 +42,7 @@ class Registrator{
             opts.port = 8500;
         }
         if (! opts.promisify){
-            opts.promisify = fromCallback
+            opts.promisify = fromCallback;
         }
         this.consulAddr = opts.host;
         this.consulPort = opts.port;

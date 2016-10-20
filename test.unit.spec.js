@@ -167,7 +167,7 @@ describe('cf-registrator tests', function () {
         let rSpy = new RegistratorSpy();
 
         rSpy.httpRequestStub = sinon.stub();
-        var request = new (require('stream').PassThrough);
+        var request = new (require('stream').PassThrough); // jshint ignore:line
         var writeStub = sinon.spy(request, 'write'); // jshint ignore:line
         rSpy.httpRequestStub.returns(request);
 
