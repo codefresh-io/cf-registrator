@@ -79,6 +79,13 @@ describe('cf-registrator tests', function () {
         expect(registrator.consul._opts.port).to.equal(8500);
     });
 
+    it('set consul', function () {
+        var registrator = require('.');
+        registrator.setConsul({host: 'myConsul', port: 1234});
+        expect(registrator.consul._opts.host).to.equal('myConsul');
+        expect(registrator.consul._opts.port).to.equal(1234);
+    });
+
     it('processServiceEnv', function() {
 
         process.env.SERVICE_ID = 'test:service:0001';

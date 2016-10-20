@@ -23,19 +23,30 @@ var fromCallback = function (fn) {
 
 class Registrator{
 
-    constructor(opts) {
-        opts = opts || {};
-        this.consulAddr = opts.consulAddr || 'consul';
-        this.consulPort = opts.consulPort || 8500;
-        this.consul = require('consul')({ host: this.consulAddr,
-            port: this.consulPort,
-            promisify: fromCallback });
+    constructor() {
 
+        this.setConsul();
         this.healthStatus = "passing";
         this.healthOutput = "";
 
-        this.maxTries = opts.maxTries || 100;
-        this.tryDelay = opts.tryDelay || 10000;
+        this.maxTries = 100;
+        this.tryDelay = 10000;
+    }
+
+    setConsul(opts){
+        opts = opts || {};
+        if (! opts.host){
+            opts.host = 'consul';
+        }
+        if (! opts.port){
+            opts.port = 8500;
+        }
+        if (! opts.promisify){
+            opts.promisify = fromCallback
+        }
+        this.consulAddr = opts.host;
+        this.consulPort = opts.port;
+        this.consul = require('consul')(opts);
     }
 
     /**
