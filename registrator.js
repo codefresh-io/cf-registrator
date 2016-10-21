@@ -132,7 +132,8 @@ class Registrator{
             ServiceID: self.serviceDef.ID,
             Name: heathCheck.Name || ("check_" + self.serviceDef.Name) ,
             Notes: heathCheck.Notes || ("Health check for service " + self.serviceDef.Name),
-            TTL: heathCheck.TTL || process.env.SERVICE_CHECK_TTL || "15s"
+            TTL: heathCheck.TTL || process.env.SERVICE_CHECK_TTL || "15s",
+            Status: heathCheck.Status || "passing"
         };
         self.checkPromise = heathCheck.checkPromise || (() => Q({status: "passing"}));
 
